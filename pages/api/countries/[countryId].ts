@@ -4,7 +4,6 @@ import {
   getCountryById,
   updateCountryById,
 } from '../../../database/countries';
-import { Country } from '../../../utils/types';
 
 export default async function handler(
   req: NextApiRequest,
@@ -35,11 +34,9 @@ export default async function handler(
 
     // Check all the information to create the country
     if (!(name && capital && population && gdpPerCapita)) {
-      return res
-        .status(400)
-        .json({
-          message: 'name, capital, population or GDP per Capita missing',
-        });
+      return res.status(400).json({
+        message: 'name, capital, population or GDP per Capita missing',
+      });
     }
 
     // Create the animal using the database util function
@@ -65,8 +62,6 @@ export default async function handler(
     if (!deletedCountry) {
       return res.status(404).json({ message: 'Not a valid Id' });
     }
-
-    console.log(deletedCountry);
 
     return res.status(200).json(deletedCountry);
   }

@@ -1,11 +1,8 @@
-import { GetServerSidePropsContext } from 'next';
+import { css } from '@emotion/react';
 import Head from 'next/head';
-import { Fragment, useEffect, useState } from 'react';
-import {
-  getAllCountries,
-  getCountriesWithLimit,
-  getCountryById,
-} from '../database/countries';
+import React, { useEffect, useState } from 'react';
+import { getAllCountries } from '../database/countries';
+import { indexStyle } from '../styles/index';
 import { Country } from '../utils/types';
 
 type Props = {
@@ -14,7 +11,7 @@ type Props = {
 };
 
 export default function Home(props: Props) {
-  const [countries, setCountries] = useState(props.countries || []);
+  const [countries, setCountries] = useState<Country[]>(props.countries);
   const [nameInput, setNameInput] = useState('');
   const [capitalInput, setCapitalInput] = useState('');
   const [popInput, setPopInput] = useState<number | undefined>();
@@ -33,32 +30,6 @@ export default function Home(props: Props) {
         })}
       </div>
     );
-  }
-
-  async function getCountriesFromApi() {
-    const response = await fetch('/api/countries');
-    const countriesFromApi = await response.json();
-
-    setCountries(countriesFromApi);
-  }
-
-  async function createCountryFromApi() {
-    const response = await fetch('/api/countries', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        name: nameInput,
-        capital: capitalInput,
-        population: popInput,
-        gdpPerCapita: gdpInput,
-      }),
-    });
-    const countryFromApi = (await response.json()) as Country;
-    const newState = [...props.countries, countryFromApi];
-
-    setCountries(newState);
   }
 
   async function deleteCountryFromApiById(id: number) {
@@ -84,8 +55,8 @@ export default function Home(props: Props) {
       body: JSON.stringify({
         name: nameInput,
         capital: capitalInput,
-        population: popInput,
-        gdpPerCapita: gdpInput,
+        population: Number(popInput),
+        gdpPerCapita: Number(gdpInput),
       }),
     });
     const updatedCountryFromApi = (await response.json()) as Country;
@@ -100,11 +71,35 @@ export default function Home(props: Props) {
 
     setCountries(newState);
   }
-  useEffect(() => {
-    getCountriesFromApi().catch((err) => {
-      console.log(err);
+  async function getCountriesFromApi() {
+    const response = await fetch('/api/countries');
+    const countriesFromApi = await response.json();
+
+    setCountries(countriesFromApi);
+  }
+  async function createCountryFromApi() {
+    const response = await fetch('/api/countries', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: nameInput,
+        capital: capitalInput,
+        population: Number(popInput),
+        gdpPerCapita: Number(gdpInput),
+      }),
     });
-  }, []);
+    const countryFromApi = (await response.json()) as Country;
+    const newState = [countryFromApi, ...props.countries];
+
+    setNameInput('');
+    setCapitalInput('');
+    setPopInput(0);
+    setGdpInput(0);
+    setCountries(newState);
+  }
+
   if ('errors' in props) {
     return (
       <div>
@@ -123,138 +118,149 @@ export default function Home(props: Props) {
           content="A list of countries with various data entries"
         />
       </Head>
-      <div>Records of countries</div>
-      <label>
-        Name
-        <br />
-        <input
-          value={nameInput}
-          onChange={(event) => {
-            setNameInput(event.currentTarget.value);
-          }}
-        />
-      </label>
-      <br />
-      <label>
-        Capital
-        <br />
-        <input
-          value={capitalInput}
-          onChange={(event) => {
-            setCapitalInput(event.currentTarget.value);
-          }}
-        />
-      </label>
-      <br />
-      <label>
-        Population
-        <br />
-        <input
-          value={popInput}
-          type="number"
-          onChange={(event) => {
-            setPopInput(Number(event.currentTarget.value));
-          }}
-        />
-      </label>
-      <br />
-      <label>
-        GDP per Capita
-        <br />
-        <input
-          value={gdpInput}
-          onChange={(event) => {
-            setGdpInput(Number(event.currentTarget.value));
-          }}
-        />
-      </label>
-      <button
-        onClick={async () => {
-          await createCountryFromApi();
-        }}
-      >
-        Create Country
-      </button>
-      <hr />
-      {props.countries.map((country) => {
-        const isCountryOnEdit = onEditId === country.id;
-
-        return (
-          <Fragment key={country.id}>
-            <input
-              value={isCountryOnEdit ? nameOnEditInput : country.name}
-              disabled={!isCountryOnEdit}
-              onChange={(event) => {
-                setNameOnEditInput(event.currentTarget.value);
-              }}
-            />
-            <input
-              value={isCountryOnEdit ? capitalOnEditInput : country.capital}
-              disabled={!isCountryOnEdit}
-              onChange={(event) => {
-                setCapitalOnEditInput(event.currentTarget.value);
-              }}
-            />
-            <input
-              value={isCountryOnEdit ? popOnEditInput : country.population}
-              disabled={!isCountryOnEdit}
-              onChange={(event) => {
-                setPopOnEditInput(Number(event.currentTarget.value));
-              }}
-            />
-            <input
-              value={isCountryOnEdit ? gdpOnEditInput : country.gdpPerCapita}
-              disabled={!isCountryOnEdit}
-              onChange={(event) => {
-                setGdpOnEditInput(Number(event.currentTarget.value));
-              }}
-            />
-            <button onClick={() => deleteCountryFromApiById(country.id)}>
-              X
-            </button>
-            {!isCountryOnEdit ? (
-              <button
-                onClick={() => {
-                  setOnEditId(country.id);
-                  setNameOnEditInput(country.name);
-                  setCapitalOnEditInput(country.capital);
-                  setPopOnEditInput(country.population);
-                  setGdpOnEditInput(country.gdpPerCapita);
-                }}
-              >
-                edit
-              </button>
-            ) : (
-              <button
-                onClick={async () => {
-                  setOnEditId(undefined);
-                  await updateCountryFromApiById(country.id);
-                }}
-              >
-                save
-              </button>
-            )}
+      <main css={indexStyle.main}>
+        <nav css={indexStyle.entryNav}>
+          <div>
+            <label css={indexStyle.labelStyle}>Name</label>
             <br />
-          </Fragment>
-        );
-      })}
-      {countries.length < 6 && (
-        <button onClick={() => getCountriesFromApi()}>show more than 5</button>
-      )}
+            <input
+              css={indexStyle.entryBoxStyle}
+              value={nameInput}
+              onChange={(event) => {
+                setNameInput(event?.currentTarget.value);
+              }}
+            />
+            <br />
+            <label css={indexStyle.labelStyle}>Capital</label>
+            <br />
+            <input
+              css={indexStyle.entryBoxStyle}
+              value={capitalInput}
+              onChange={(event) => {
+                setCapitalInput(event?.currentTarget.value);
+              }}
+            />
+            <br />
+            <label css={indexStyle.labelStyle}>Population </label>
+            <br />
+            <input
+              css={indexStyle.entryBoxStyle}
+              value={popInput}
+              type="number"
+              onChange={(event) => {
+                setPopInput(Number(event?.currentTarget.value));
+              }}
+            />
+            <br />
+            <label css={indexStyle.labelStyle}>GDP per Capita</label>
+
+            <br />
+            <input
+              css={indexStyle.entryBoxStyle}
+              value={gdpInput}
+              onChange={(event) => {
+                setGdpInput(Number(event?.currentTarget.value));
+              }}
+            />
+            <br />
+            <button
+              css={indexStyle.buttonStyle}
+              onClick={async () => {
+                await createCountryFromApi();
+              }}
+            >
+              Create Country
+            </button>
+          </div>
+        </nav>
+
+        {props.countries.map((country) => {
+          const isCountryOnEdit = onEditId === country.id;
+
+          return (
+            <nav css={indexStyle.entryNavTable}>
+              <div key={country.id}>
+                <input
+                  value={isCountryOnEdit ? nameOnEditInput : country.name}
+                  disabled={!isCountryOnEdit}
+                  onChange={(event) => {
+                    setNameOnEditInput(event.currentTarget.value);
+                  }}
+                />
+                <input
+                  value={isCountryOnEdit ? capitalOnEditInput : country.capital}
+                  disabled={!isCountryOnEdit}
+                  onChange={(event) => {
+                    setCapitalOnEditInput(event.currentTarget.value);
+                  }}
+                />
+                <input
+                  value={isCountryOnEdit ? popOnEditInput : country.population}
+                  disabled={!isCountryOnEdit}
+                  onChange={(event) => {
+                    setPopOnEditInput(Number(event.currentTarget.value));
+                  }}
+                />
+                <input
+                  value={
+                    isCountryOnEdit ? gdpOnEditInput : country.gdpPerCapita
+                  }
+                  disabled={!isCountryOnEdit}
+                  onChange={(event) => {
+                    setGdpOnEditInput(Number(event.currentTarget.value));
+                  }}
+                />
+                <button
+                  css={indexStyle.smallButtonStyle}
+                  onClick={() => deleteCountryFromApiById(country.id)}
+                >
+                  X
+                </button>
+                {!isCountryOnEdit ? (
+                  <button
+                    css={indexStyle.smallButtonStyle}
+                    onClick={() => {
+                      setOnEditId(country.id);
+                      setNameOnEditInput(country.name);
+                      setCapitalOnEditInput(country.capital);
+                      setPopOnEditInput(country.population);
+                      setGdpOnEditInput(country.gdpPerCapita);
+                    }}
+                  >
+                    edit
+                  </button>
+                ) : (
+                  <button
+                    css={indexStyle.smallButtonStyle}
+                    onClick={async () => {
+                      setOnEditId(undefined);
+                      await updateCountryFromApiById(country.id);
+                    }}
+                  >
+                    save
+                  </button>
+                )}
+              </div>
+              <br />
+            </nav>
+          );
+        })}
+        {countries.length < 6 && (
+          <button
+            css={indexStyle.smallButtonStyle}
+            onClick={() => getCountriesFromApi()}
+          >
+            show more than 5
+          </button>
+        )}
+      </main>
     </>
   );
 }
 export async function getServerSideProps() {
-  //const initialCountriesList = await getCountriesWithLimit(5);
   const countries = await getAllCountries();
-  // if (!countries) {
-  //   return {
-  //     props: {
-  //       countries: [],
-  //     },
-  //   };
-  // }
+
   return {
-    props: { countries },
+    props: { countries: countries },
   };
 }
