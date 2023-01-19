@@ -2,7 +2,7 @@
 
 A Next.js app for displaying a list of countries with different characteristics.
 
-## Screenshots
+## Screenshot
 
 <img src="https://raw.githubusercontent.com/matjaz-vidmar/records-of-countries/main/public/screenshot.png"/>
 
