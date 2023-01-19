@@ -1,17 +1,21 @@
 import { css } from '@emotion/react';
 import Head from 'next/head';
-import React, { useEffect, useState } from 'react';
-import { getAllCountries } from '../database/countries';
+import { Fragment, useState } from 'react';
+import { getAllCountries, getCountriesWithLimit } from '../database/countries';
 import { indexStyle } from '../styles/index';
 import { Country } from '../utils/types';
 
-type Props = {
-  countries: Country[];
-  errors: { message: string }[];
-};
+type Props =
+  | {
+      countries: undefined;
+      errors: { message: string }[];
+    }
+  | {
+      countries: Country[];
+    };
 
 export default function Home(props: Props) {
-  const [countries, setCountries] = useState<Country[]>(props.countries);
+  const [countries, setCountries] = useState<Country[]>(props.countries || []);
   const [nameInput, setNameInput] = useState('');
   const [capitalInput, setCapitalInput] = useState('');
   const [popInput, setPopInput] = useState<number | undefined>();
@@ -31,52 +35,13 @@ export default function Home(props: Props) {
       </div>
     );
   }
-
-  async function deleteCountryFromApiById(id: number) {
-    const response = await fetch(`/api/countries/${id}`, {
-      method: 'DELETE',
-    });
-
-    const deletedCountry = (await response.json()) as Country;
-
-    const filteredCountries = props.countries.filter((country) => {
-      return country.id !== deletedCountry.id;
-    });
-
-    setCountries(filteredCountries);
-  }
-
-  async function updateCountryFromApiById(id: number) {
-    const response = await fetch(`/api/countries/${id}`, {
-      method: 'PUT',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        name: nameInput,
-        capital: capitalInput,
-        population: Number(popInput),
-        gdpPerCapita: Number(gdpInput),
-      }),
-    });
-    const updatedCountryFromApi = (await response.json()) as Country;
-
-    const newState = props.countries.map((country) => {
-      if (country.id === updatedCountryFromApi.id) {
-        return updatedCountryFromApi;
-      } else {
-        return country;
-      }
-    });
-
-    setCountries(newState);
-  }
   async function getCountriesFromApi() {
     const response = await fetch('/api/countries');
     const countriesFromApi = await response.json();
 
     setCountries(countriesFromApi);
   }
+
   async function createCountryFromApi() {
     const response = await fetch('/api/countries', {
       method: 'POST',
@@ -91,7 +56,7 @@ export default function Home(props: Props) {
       }),
     });
     const countryFromApi = (await response.json()) as Country;
-    const newState = [countryFromApi, ...props.countries];
+    const newState = [countryFromApi, ...countries];
 
     setNameInput('');
     setCapitalInput('');
@@ -100,15 +65,46 @@ export default function Home(props: Props) {
     setCountries(newState);
   }
 
-  if ('errors' in props) {
-    return (
-      <div>
-        {props.errors.map((error) => {
-          return <div key={error.message}>{error.message}</div>;
-        })}
-      </div>
-    );
+  async function deleteCountryFromApiById(id: number) {
+    const response = await fetch(`/api/countries/${id}`, {
+      method: 'DELETE',
+    });
+
+    const deletedCountry = (await response.json()) as Country;
+
+    const filteredCountries = countries.filter((country) => {
+      return country.id !== deletedCountry.id;
+    });
+
+    setCountries(filteredCountries);
   }
+
+  async function updateCountryFromApiById(id: number) {
+    const response = await fetch(`/api/countries/${id}`, {
+      method: 'PUT',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: nameOnEditInput,
+        capital: capitalOnEditInput,
+        population: Number(popOnEditInput),
+        gdpPerCapita: Number(gdpOnEditInput),
+      }),
+    });
+    const updatedCountryFromApi = (await response.json()) as Country;
+
+    const newState = countries.map((country) => {
+      if (country.id === updatedCountryFromApi.id) {
+        return updatedCountryFromApi;
+      } else {
+        return country;
+      }
+    });
+
+    setCountries(newState);
+  }
+
   return (
     <>
       <Head>
@@ -174,12 +170,12 @@ export default function Home(props: Props) {
           </div>
         </nav>
 
-        {props.countries.map((country) => {
+        {countries.map((country) => {
           const isCountryOnEdit = onEditId === country.id;
 
           return (
             <nav css={indexStyle.entryNavTable}>
-              <div key={country.id}>
+              <Fragment key={country.id}>
                 <input
                   value={isCountryOnEdit ? nameOnEditInput : country.name}
                   disabled={!isCountryOnEdit}
@@ -216,6 +212,7 @@ export default function Home(props: Props) {
                 >
                   X
                 </button>
+
                 {!isCountryOnEdit ? (
                   <button
                     css={indexStyle.smallButtonStyle}
@@ -240,27 +237,30 @@ export default function Home(props: Props) {
                     save
                   </button>
                 )}
-              </div>
+              </Fragment>
+
               <br />
             </nav>
           );
         })}
         {countries.length < 6 && (
-          <button
-            css={indexStyle.smallButtonStyle}
-            onClick={() => getCountriesFromApi()}
-          >
-            show more than 5
-          </button>
+          <div css={indexStyle.entryNavTable}>
+            <button
+              css={indexStyle.buttonStyle}
+              onClick={() => getCountriesFromApi()}
+            >
+              show more than 5
+            </button>
+          </div>
         )}
       </main>
     </>
   );
 }
 export async function getServerSideProps() {
-  const countries = await getAllCountries();
+  const initialCountriesList = await getCountriesWithLimit(5);
 
   return {
-    props: { countries: countries },
+    props: { countries: initialCountriesList },
   };
 }
